@@ -1,0 +1,36 @@
+version: '3'
+services:
+  foodfiles-db:
+    image: postgres
+    container_name: foodfiles-postgres-container
+    ports:
+      - "5400:5432"
+    env_file:
+      - database.env
+    volumes:
+      - ./postgres.conf:/etc/postgresql/postgresql.conf
+      - ./foodfiles/internal/:/docker-entrypoint-initdb.d/
+      - database-data:/var/lib/postgresql/data/
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    restart: unless-stopped
+    
+  foodfiles-service:
+    build:
+      context: .
+    command: uvicorn foodfiles.main:app --reload
+    volumes:
+      - .:/workarea
+    depends_on: 
+      - foodfiles-db
+      
+  test:
+    build: .
+    command: pytest -v
+    volumes:
+      - .:/workarea
+    depends_on: 
+      - foodfiles-db
+      - foodfiles-service
+        
+volumes:
+  database-data:
